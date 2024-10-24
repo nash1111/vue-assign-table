@@ -4,10 +4,17 @@
       <div
         v-for="(item, index) in leftColumnItems"
         :key="index"
-        :class="['box', item.assigned ? 'assigned' : 'unassigned']"
-        @click="assignItem(index)"
+        :class="['box', item.isFullyAssigned ? 'fully-assigned' : 'partially-assigned']"
+        @click="selectLeftItem(index)"
       >
-        {{ item.price }} 円
+        <!-- アサイン状態に応じてスタイルを分ける -->
+        <span :class="['amount', item.unassignedPrice > 0 ? 'unassigned' : '']">
+          {{ item.unassignedPrice }} 円
+        </span>
+        <span :class="['amount', item.assignedPrice > 0 ? 'assigned' : '']">
+          {{ item.assignedPrice }} 円
+        </span>
+        <div v-if="item.assignedPerson" class="arrow">➡</div>
       </div>
     </div>
     <div class="right-column">
@@ -15,9 +22,19 @@
         v-for="(person, index) in rightColumnPeople"
         :key="index"
         class="box person"
+        @click="selectRightPerson(person)"
       >
-        {{ person.name }}
+        {{ person.name }} - 単価: {{ person.price }}円, 人月: {{ person.workMonth }}
       </div>
+    </div>
+
+    <!-- 人月選択ボックスと決定ボタン -->
+    <div v-if="selectedLeftItem !== null && selectedRightPerson !== null" class="assign-box">
+      <p>アサインする人月を選択してください:</p>
+      <select v-model="selectedWorkMonth">
+        <option v-for="n in maxWorkMonths" :key="n" :value="n">{{ n }}</option>
+      </select>
+      <button @click="confirmAssignment">決定</button>
     </div>
   </div>
 </template>
@@ -27,26 +44,57 @@ export default {
   data() {
     return {
       leftColumnItems: [
-        { price: 5000, assigned: false },
-        { price: 10000, assigned: false },
-        { price: 15000, assigned: true }, // 初期でアサイン済み
+        { price: 5000, assignedPrice: 0, unassignedPrice: 5000, isFullyAssigned: false, assignedPerson: null },
+        { price: 10000, assignedPrice: 0, unassignedPrice: 10000, isFullyAssigned: false, assignedPerson: null },
+        { price: 15000, assignedPrice: 15000, unassignedPrice: 0, isFullyAssigned: true, assignedPerson: "鈴木" }, // 初期でアサイン済み
       ],
       rightColumnPeople: [
-        { name: "田中" },
-        { name: "佐藤" },
-        { name: "鈴木" },
+        { name: "田中", price: 5000, workMonth: 1.0, assigned: false },
+        { name: "佐藤", price: 8000, workMonth: 0.5, assigned: false },
+        { name: "鈴木", price: 12000, workMonth: 2.0, assigned: true },
       ],
-      assignedPeople: [],
+      selectedLeftItem: null,
+      selectedRightPerson: null,
+      selectedWorkMonth: 0.5,
+      maxWorkMonths: [0.5, 1.0, 1.5, 2.0, 2.5, 3.0], // 人月選択肢
     };
   },
   methods: {
-    assignItem(index) {
-      if (!this.leftColumnItems[index].assigned) {
-        const person = this.rightColumnPeople.shift();
-        if (person) {
-          this.assignedPeople.push(person);
-          this.leftColumnItems[index].assigned = true;
+    // 左のセルを選択
+    selectLeftItem(index) {
+      if (!this.leftColumnItems[index].isFullyAssigned) {
+        this.selectedLeftItem = this.leftColumnItems[index];
+        this.selectedRightPerson = null; // 右の人物が選択されていない状態にリセット
+      }
+    },
+    // 右の人物を選択
+    selectRightPerson(person) {
+      if (this.selectedLeftItem && !person.assigned) {
+        this.selectedRightPerson = person;
+      }
+    },
+    // アサインの確定
+    confirmAssignment() {
+      if (this.selectedLeftItem && this.selectedRightPerson) {
+        const assignAmount = this.selectedWorkMonth * this.selectedRightPerson.price;
+
+        // 左の列のアイテムを更新
+        this.selectedLeftItem.assignedPrice += assignAmount;
+        this.selectedLeftItem.unassignedPrice -= assignAmount;
+
+        // 人物のアサイン状態を更新
+        this.selectedLeftItem.assignedPerson = this.selectedRightPerson.name;
+        this.selectedRightPerson.assigned = true;
+
+        // 完全アサインの確認
+        if (this.selectedLeftItem.unassignedPrice <= 0) {
+          this.selectedLeftItem.isFullyAssigned = true;
         }
+
+        // 選択をリセット
+        this.selectedLeftItem = null;
+        this.selectedRightPerson = null;
+        this.selectedWorkMonth = 0.5; // 初期値にリセット
       }
     },
   },
@@ -67,6 +115,15 @@ export default {
   padding: 10px;
   margin-bottom: 5px;
   text-align: center;
+  position: relative;
+}
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  right: -20px;
+  transform: translateY(-50%);
+  font-size: 24px;
 }
 
 .assigned {
@@ -79,7 +136,36 @@ export default {
   color: white;
 }
 
+.amount {
+  display: block;
+}
+
+.fully-assigned {
+  background-color: blue;
+  color: white;
+}
+
+.partially-assigned {
+  background-color: linear-gradient(to bottom, red, blue);
+}
+
 .person {
   background-color: gray;
+}
+
+.assign-box {
+  margin-top: 20px;
+}
+
+.assign-box p {
+  font-weight: bold;
+}
+
+.assign-box select {
+  margin-right: 10px;
+}
+
+.assign-box button {
+  padding: 5px 10px;
 }
 </style>
