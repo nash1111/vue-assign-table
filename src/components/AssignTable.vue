@@ -25,7 +25,7 @@
           :key="person.name"
           class="arrow"
         >
-          ➡
+          ⬅
         </div>
       </div>
     </div>
