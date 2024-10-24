@@ -14,9 +14,22 @@
         <span :class="['amount', item.assignedPrice > 0 ? 'assigned' : '']">
           {{ item.assignedPrice }} 円
         </span>
-        <div v-if="item.assignedPerson" class="arrow">➡</div>
       </div>
     </div>
+
+    <!-- 矢印表示スペース -->
+    <div class="arrow-container">
+      <div v-for="item in leftColumnItems" :key="item.price" class="arrows">
+        <div
+          v-for="person in item.assignedPeople"
+          :key="person.name"
+          class="arrow"
+        >
+          ➡
+        </div>
+      </div>
+    </div>
+
     <div class="right-column">
       <div
         v-for="(person, index) in rightColumnPeople"
@@ -44,9 +57,9 @@ export default {
   data() {
     return {
       leftColumnItems: [
-        { price: 5000, assignedPrice: 0, unassignedPrice: 5000, isFullyAssigned: false, assignedPerson: null },
-        { price: 10000, assignedPrice: 0, unassignedPrice: 10000, isFullyAssigned: false, assignedPerson: null },
-        { price: 15000, assignedPrice: 15000, unassignedPrice: 0, isFullyAssigned: true, assignedPerson: "鈴木" }, // 初期でアサイン済み
+        { price: 5000, assignedPrice: 0, unassignedPrice: 5000, isFullyAssigned: false, assignedPeople: [] },
+        { price: 10000, assignedPrice: 0, unassignedPrice: 10000, isFullyAssigned: false, assignedPeople: [] },
+        { price: 15000, assignedPrice: 15000, unassignedPrice: 0, isFullyAssigned: true, assignedPeople: [{ name: "鈴木", price: 12000, workMonth: 2.0 }] }, // 初期でアサイン済み
       ],
       rightColumnPeople: [
         { name: "田中", price: 5000, workMonth: 1.0, assigned: false },
@@ -82,8 +95,14 @@ export default {
         this.selectedLeftItem.assignedPrice += assignAmount;
         this.selectedLeftItem.unassignedPrice -= assignAmount;
 
+        // アサインされた人物を配列に追加
+        this.selectedLeftItem.assignedPeople.push({
+          name: this.selectedRightPerson.name,
+          price: this.selectedRightPerson.price,
+          workMonth: this.selectedWorkMonth,
+        });
+
         // 人物のアサイン状態を更新
-        this.selectedLeftItem.assignedPerson = this.selectedRightPerson.name;
         this.selectedRightPerson.assigned = true;
 
         // 完全アサインの確認
@@ -104,6 +123,7 @@ export default {
 <style scoped>
 .container {
   display: flex;
+  position: relative;
 }
 
 .left-column, .right-column {
@@ -118,11 +138,23 @@ export default {
   position: relative;
 }
 
+.arrow-container {
+  width: 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin: 0 10px;
+}
+
+.arrows {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
 .arrow {
-  position: absolute;
-  top: 50%;
-  right: -20px;
-  transform: translateY(-50%);
   font-size: 24px;
 }
 
@@ -146,7 +178,7 @@ export default {
 }
 
 .partially-assigned {
-  background-color: linear-gradient(to bottom, red, blue);
+  background: linear-gradient(to bottom, red, blue);
 }
 
 .person {
